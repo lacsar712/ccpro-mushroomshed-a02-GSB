@@ -1,5 +1,6 @@
 export type RoomStatus = 'fruiting' | 'idle' | 'sanitize'
 export type HarvestGrade = 'A' | 'B' | 'C'
+export type RestIntensity = 'mild' | 'strict'
 
 export interface Shed {
   id: number
@@ -35,6 +36,16 @@ export interface FlushHarvest {
   weightKg: number
   grade: HarvestGrade
   operatorName: string
+  confirmText?: string | null
+}
+
+export interface RestWindow {
+  id: number
+  roomId: number
+  startAt: string
+  endAt: string
+  intensity: RestIntensity
+  note?: string | null
 }
 
 export interface DashboardStats {

@@ -16,5 +16,6 @@ class FlushHarvest(Base):
     weight_kg: Mapped[float] = mapped_column(Float, nullable=False)
     grade: Mapped[str] = mapped_column(String(1), nullable=False)
     operator_name: Mapped[str] = mapped_column(String(64), nullable=False)
+    rest_confirm_text: Mapped[str | None] = mapped_column(String(200), nullable=True)
 
     room: Mapped["Room"] = relationship("Room", back_populates="flush_harvests")

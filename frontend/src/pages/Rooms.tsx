@@ -1,9 +1,21 @@
 import { createSignal, onMount } from 'solid-js'
 import { For } from 'solid-js'
 import { api } from '../api/client'
-import type { Room, RoomStatus, Shed } from '../types'
+import type { RestWindow, Room, RoomStatus, Shed } from '../types'
 
 const statuses: RoomStatus[] = ['fruiting', 'idle', 'sanitize']
+
+function activeWindowAt(windows: RestWindow[], roomId: number, now = Date.now()): RestWindow | undefined {
+  let mild: RestWindow | undefined
+  for (const w of windows) {
+    if (w.roomId !== roomId) continue
+    if (new Date(w.startAt).getTime() <= now && now < new Date(w.endAt).getTime()) {
+      if (w.intensity === 'strict') return w
+      mild = w
+    }
+  }
+  return mild
+}
 
 const empty = {
   shedId: '',
@@ -16,16 +28,19 @@ const empty = {
 export default function Rooms() {
   const [rows, setRows] = createSignal<Room[]>([])
   const [sheds, setSheds] = createSignal<Shed[]>([])
+  const [restWindows, setRestWindows] = createSignal<RestWindow[]>([])
   const [form, setForm] = createSignal({ ...empty })
   const [error, setError] = createSignal('')
 
   async function load() {
-    const [rooms, shedList] = await Promise.all([
+    const [rooms, shedList, windows] = await Promise.all([
       api<Room[]>('/api/rooms'),
       api<Shed[]>('/api/sheds'),
+      api<RestWindow[]>('/api/rest-windows'),
     ])
     setRows(rooms)
     setSheds(shedList)
+    setRestWindows(windows)
   }
 
   onMount(() => {
@@ -141,6 +156,7 @@ export default function Rooms() {
               <th>品种</th>
               <th>容量</th>
               <th>状态</th>
+              <th>休整</th>
               <th />
             </tr>
           </thead>
@@ -155,6 +171,21 @@ export default function Rooms() {
                   <td>{r.capacityBags}</td>
                   <td>
                     <span class={statusBadge(r.status)}>{r.status}</span>
+                  </td>
+                  <td>
+                    {(() => {
+                      const w = activeWindowAt(restWindows(), r.id)
+                      return w ? (
+                        <span
+                          class={`badge rest-${w.intensity}`}
+                          title={`${new Date(w.startAt).toLocaleString()} ~ ${new Date(w.endAt).toLocaleString()}${w.note ? '；' + w.note : ''}`}
+                        >
+                          休整中·{w.intensity}
+                        </span>
+                      ) : (
+                        '—'
+                      )
+                    })()}
                   </td>
                   <td>
                     <button type="button" class="btn ghost" onClick={() => remove(r.id)}>

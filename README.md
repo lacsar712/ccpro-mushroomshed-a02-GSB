@@ -46,14 +46,23 @@ docker compose up --build
 2. **Shed 菇房**：`name`、`location`、`notes`
 3. **Room 出菇室**：`shedId`、`roomCode`、`species`、`capacityBags`、`status(fruiting|idle|sanitize)`；同菇房 `roomCode` 唯一
 4. **ClimateLog 环境记录**：`roomId`、`recordedAt`、`tempC`、`humidityPct`、`co2Ppm`、`notes`；`humidityPct ∈ [1,100]`，否则 **400**
-5. **FlushHarvest 采收**：`roomId`、`harvestedAt`、`flushNo(≥1)`、`weightKg`、`grade(A|B|C)`、`operatorName`；`weightKg > 0`，否则 **400**
-6. **Dashboard**：`shedTotal`、`fruitingRoomCount`、`climateLast24h`、`harvestKgLast7d`
+5. **FlushHarvest 采收**：`roomId`、`harvestedAt`、`flushNo(≥1)`、`weightKg`、`grade(A|B|C)`、`operatorName`；`weightKg > 0`，否则 **400**；若采收时间命中休整窗：**strict → 409 拒绝**，**mild → 必须带非空 `confirmText`（否则 400）并落库 `restConfirmText`**
+6. **RestWindow 休整禁采窗**：`roomId`、`startAt`、`endAt`、`intensity(mild|strict)`、`note(可空)`
+   - 同一出菇室时间窗相交（半开区间 `[startAt, endAt)`，边界相接不算相交）→ **409**
+   - `idle` 状态出菇室禁止开窗 → **409**；`endAt <= startAt` → **400**
+   - 休整窗不改动 room 的 `fruiting/idle/sanitize` 状态机，仅作采收侧强制
+   - API：`GET/POST /api/rest-windows`（`?roomId=` 过滤）、`DELETE /api/rest-windows/{id}`
+7. **Dashboard**：`shedTotal`、`fruitingRoomCount`、`climateLast24h`、`harvestKgLast7d`
+
+> 后端是唯一强制点：前端只做提示，不做本地假拦截。Seed 含 1 条覆盖当前时间的 **strict** 窗（V-01 杏鲍菇室）与 1 条未来 **mild** 窗（R-01）。
+>
+> 建表方式为启动时 `create_all`（无迁移工具）：新库直接包含 `rest_windows` 表与 `flush_harvests.rest_confirm_text` 列；已存在的旧库需手动 `ALTER TABLE flush_harvests ADD COLUMN rest_confirm_text VARCHAR(200) NULL;` 并创建 `rest_windows` 表（或重建库）。
 
 各实体 API：`GET/POST` 列表与创建、`DELETE` 按 ID 删除。
 
 ## 前端页面
 
-Login · Dashboard · Sheds · Rooms · ClimateLogs · FlushHarvests（侧边栏布局）
+Login · Dashboard · Sheds · Rooms（行内显示「休整中·strict/mild」徽标） · ClimateLogs · FlushHarvests（mild 窗内填确认语、strict 窗提示将被后端拒绝） · RestWindows（侧边栏「休整窗」）
 
 ## 本地开发（可选）
 

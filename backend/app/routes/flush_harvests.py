@@ -6,7 +6,7 @@ from app.database import SessionLocal
 from app.models.flush_harvest import FlushHarvest
 from app.models.room import Room
 from app.schemas.flush_harvest import FlushHarvestCreateSchema, FlushHarvestOutSchema
-from app.utils import validation_error_response
+from app.utils import active_rest_window, validation_error_response
 
 bp = Blueprint("flush_harvests", __name__, url_prefix="/api/flush-harvests")
 
@@ -42,6 +42,25 @@ def create_flush_harvest():
         room = db.query(Room).filter(Room.id == data["room_id"]).first()
         if not room:
             return jsonify({"detail": "出菇室不存在"}), 400
+
+        window = active_rest_window(db, data["room_id"], data["harvested_at"])
+        confirm_text = (data.get("confirm_text") or "").strip()
+        if window and window.intensity == "strict":
+            return (
+                jsonify(
+                    {
+                        "detail": (
+                            f"该时间处于 strict 休整窗（#{window.id}，"
+                            f"{window.start_at:%Y-%m-%d %H:%M} ~ {window.end_at:%Y-%m-%d %H:%M}），禁止新建采收记录"
+                        )
+                    }
+                ),
+                409,
+            )
+        if window and window.intensity == "mild":
+            if not confirm_text:
+                return jsonify({"detail": "mild 休整窗内采收必须填写确认语 confirmText"}), 400
+
         item = FlushHarvest(
             room_id=data["room_id"],
             harvested_at=data["harvested_at"],
@@ -49,6 +68,7 @@ def create_flush_harvest():
             weight_kg=data["weight_kg"],
             grade=data["grade"],
             operator_name=data["operator_name"],
+            rest_confirm_text=confirm_text if window else None,
         )
         db.add(item)
         db.commit()

@@ -4,6 +4,7 @@ from app.auth import hash_password
 from app.database import SessionLocal
 from app.models.climate_log import ClimateLog
 from app.models.flush_harvest import FlushHarvest
+from app.models.rest_window import RestWindow
 from app.models.room import Room
 from app.models.shed import Shed
 from app.models.user import User
@@ -134,6 +135,22 @@ def seed() -> None:
                         weight_kg=55.2,
                         grade="A",
                         operator_name="出菇员",
+                    ),
+                    # strict 休整窗：覆盖当前时间，期间禁止新建采收
+                    RestWindow(
+                        room_id=r3.id,
+                        start_at=now - timedelta(days=1),
+                        end_at=now + timedelta(days=2),
+                        intensity="strict",
+                        note="菌棒休菌养菌，严禁采收入账",
+                    ),
+                    # mild 休整窗（未来）：允许采收但必须填写确认语
+                    RestWindow(
+                        room_id=r1.id,
+                        start_at=now + timedelta(days=3),
+                        end_at=now + timedelta(days=5),
+                        intensity="mild",
+                        note="轻度休整，采收需主管确认",
                     ),
                 ]
             )

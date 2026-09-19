@@ -294,6 +294,42 @@ th {
   color: var(--mushroom-brown);
 }
 
+.badge.rest-strict {
+  background: #f7dede;
+  color: #a32824;
+}
+
+.badge.rest-mild {
+  background: #fbf0d6;
+  color: #8a6116;
+}
+
+.rest-notice {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  border: 1px solid transparent;
+}
+
+.rest-notice.rest-strict {
+  background: #fdf1f1;
+  border-color: #e3b4b2;
+  color: #a32824;
+}
+
+.rest-notice.rest-mild {
+  background: #fdf8ea;
+  border-color: #e5d29a;
+  color: #8a6116;
+}
+
+.rest-notice input {
+  width: 100%;
+}
+
 .login-page {
   min-height: 100vh;
   display: grid;
