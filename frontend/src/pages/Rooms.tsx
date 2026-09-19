@@ -1,7 +1,7 @@
 import { createSignal, onMount } from 'solid-js'
 import { For } from 'solid-js'
 import { api } from '../api/client'
-import type { Room, RoomStatus, Shed } from '../types'
+import type { RestWindow, Room, RoomStatus, Shed } from '../types'
 
 const statuses: RoomStatus[] = ['fruiting', 'idle', 'sanitize']
 
@@ -16,16 +16,30 @@ const empty = {
 export default function Rooms() {
   const [rows, setRows] = createSignal<Room[]>([])
   const [sheds, setSheds] = createSignal<Shed[]>([])
+  const [windows, setWindows] = createSignal<RestWindow[]>([])
   const [form, setForm] = createSignal({ ...empty })
   const [error, setError] = createSignal('')
 
   async function load() {
-    const [rooms, shedList] = await Promise.all([
+    const [rooms, shedList, restWindows] = await Promise.all([
       api<Room[]>('/api/rooms'),
       api<Shed[]>('/api/sheds'),
+      api<RestWindow[]>('/api/rest-windows'),
     ])
     setRows(rooms)
     setSheds(shedList)
+    setWindows(restWindows)
+  }
+
+  function activeRest(roomId: number): RestWindow | undefined {
+    const now = Date.now()
+    return windows().find((w) => {
+      return (
+        w.roomId === roomId &&
+        new Date(w.startAt).getTime() <= now &&
+        now < new Date(w.endAt).getTime()
+      )
+    })
   }
 
   onMount(() => {
@@ -141,6 +155,7 @@ export default function Rooms() {
               <th>品种</th>
               <th>容量</th>
               <th>状态</th>
+              <th>休整</th>
               <th />
             </tr>
           </thead>
@@ -155,6 +170,18 @@ export default function Rooms() {
                   <td>{r.capacityBags}</td>
                   <td>
                     <span class={statusBadge(r.status)}>{r.status}</span>
+                  </td>
+                  <td>
+                    {(() => {
+                      const w = activeRest(r.id)
+                      return w ? (
+                        <span class={`badge rest-${w.intensity}`} title={w.note ?? ''}>
+                          休整中 · {w.intensity}
+                        </span>
+                      ) : (
+                        <span class="hint">—</span>
+                      )
+                    })()}
                   </td>
                   <td>
                     <button type="button" class="btn ghost" onClick={() => remove(r.id)}>

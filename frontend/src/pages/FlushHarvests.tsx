@@ -1,7 +1,7 @@
 import { createSignal, onMount } from 'solid-js'
 import { For } from 'solid-js'
 import { api } from '../api/client'
-import type { FlushHarvest, HarvestGrade, Room } from '../types'
+import type { FlushHarvest, HarvestGrade, RestWindow, Room } from '../types'
 
 const grades: HarvestGrade[] = ['A', 'B', 'C']
 
@@ -18,21 +18,38 @@ const empty = {
   weightKg: '',
   grade: 'A' as HarvestGrade,
   operatorName: '',
+  confirmText: '',
 }
 
 export default function FlushHarvests() {
   const [rows, setRows] = createSignal<FlushHarvest[]>([])
   const [rooms, setRooms] = createSignal<Room[]>([])
+  const [windows, setWindows] = createSignal<RestWindow[]>([])
   const [form, setForm] = createSignal({ ...empty })
   const [error, setError] = createSignal('')
 
   async function load() {
-    const [harvests, roomList] = await Promise.all([
+    const [harvests, roomList, restWindows] = await Promise.all([
       api<FlushHarvest[]>('/api/flush-harvests'),
       api<Room[]>('/api/rooms'),
+      api<RestWindow[]>('/api/rest-windows'),
     ])
     setRows(harvests)
     setRooms(roomList)
+    setWindows(restWindows)
+  }
+
+  // 仅用于提示；真正的放行/拒绝由后端在提交时裁决，前端不做本地拦截
+  function coveringWindow(): RestWindow | undefined {
+    const roomId = Number(form().roomId)
+    if (!roomId) return undefined
+    const at = new Date(form().harvestedAt).getTime()
+    return windows().find(
+      (w) =>
+        w.roomId === roomId &&
+        new Date(w.startAt).getTime() <= at &&
+        at < new Date(w.endAt).getTime(),
+    )
   }
 
   onMount(() => {
@@ -52,6 +69,7 @@ export default function FlushHarvests() {
           weightKg: Number(form().weightKg),
           grade: form().grade,
           operatorName: form().operatorName,
+          confirmText: form().confirmText || null,
         }),
       })
       setForm({ ...empty, harvestedAt: toLocalInput() })
@@ -146,6 +164,29 @@ export default function FlushHarvests() {
             required
           />
         </label>
+        <label class="span-2">
+          休整确认语（仅在 mild 休整窗内采收时必填，由后端强制）
+          <input
+            value={form().confirmText}
+            onInput={(e) => setForm({ ...form(), confirmText: e.currentTarget.value })}
+            placeholder="例如：场长电话同意，抢收成熟子实体"
+          />
+          {(() => {
+            const w = coveringWindow()
+            if (!w) return <span class="hint">所选室在该采收时间不在休整窗内。</span>
+            if (w.intensity === 'strict')
+              return (
+                <span class="hint" style={{ color: 'var(--danger)' }}>
+                  该采收时间落在 strict 休整禁采窗内，提交将被后端拒绝（409）。
+                </span>
+              )
+            return (
+              <span class="hint" style={{ color: 'var(--warn)' }}>
+                该采收时间落在 mild 休整窗内，必须填写确认语，否则后端拒绝（409）。
+              </span>
+            )
+          })()}
+        </label>
         <button type="submit" class="btn primary">
           新增采收
         </button>
@@ -162,6 +203,7 @@ export default function FlushHarvests() {
               <th>重量</th>
               <th>等级</th>
               <th>操作人</th>
+              <th>休整确认语</th>
               <th />
             </tr>
           </thead>
@@ -178,6 +220,7 @@ export default function FlushHarvests() {
                     <span class={`badge grade-${r.grade.toLowerCase()}`}>{r.grade}</span>
                   </td>
                   <td>{r.operatorName}</td>
+                  <td>{r.confirmText ?? <span class="hint">—</span>}</td>
                   <td>
                     <button type="button" class="btn ghost" onClick={() => remove(r.id)}>
                       删除

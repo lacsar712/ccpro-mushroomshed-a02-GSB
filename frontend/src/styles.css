@@ -294,6 +294,21 @@ th {
   color: var(--mushroom-brown);
 }
 
+.badge.rest-strict {
+  background: #fde7e4;
+  color: var(--danger);
+}
+
+.badge.rest-mild {
+  background: #fdf3dd;
+  color: var(--warn);
+}
+
+.badge.rest-active {
+  background: #fde7e4;
+  color: var(--danger);
+}
+
 .login-page {
   min-height: 100vh;
   display: grid;

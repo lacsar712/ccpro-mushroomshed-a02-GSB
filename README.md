@@ -47,13 +47,20 @@ docker compose up --build
 3. **Room 出菇室**：`shedId`、`roomCode`、`species`、`capacityBags`、`status(fruiting|idle|sanitize)`；同菇房 `roomCode` 唯一
 4. **ClimateLog 环境记录**：`roomId`、`recordedAt`、`tempC`、`humidityPct`、`co2Ppm`、`notes`；`humidityPct ∈ [1,100]`，否则 **400**
 5. **FlushHarvest 采收**：`roomId`、`harvestedAt`、`flushNo(≥1)`、`weightKg`、`grade(A|B|C)`、`operatorName`；`weightKg > 0`，否则 **400**
-6. **Dashboard**：`shedTotal`、`fruitingRoomCount`、`climateLast24h`、`harvestKgLast7d`
+6. **RestWindow 休整禁采窗**：`roomId`、`startAt`、`endAt`、`intensity(mild|strict)`、`note`（可空）。规则全部由**后端强制**，前端不做本地假拦截：
+   - 同室时间窗相交（半开区间 `[startAt, endAt)`，首尾相接不算相交）→ **409**
+   - `idle` 状态的出菇室禁止开窗 → **409**
+   - `endAt ≤ startAt` → **400**
+   - 采收时间落在 **strict** 窗覆盖期内：禁止新建 FlushHarvest → **409**
+   - 采收时间落在 **mild** 窗覆盖期内：允许新建，但请求必须带非空 `confirmText`，否则 **409**；确认语随采收记录落库（返回字段 `confirmText`）
+   - 注：休整窗不改动 room 的 `fruiting|idle|sanitize` 状态机本身
+7. **Dashboard**：`shedTotal`、`fruitingRoomCount`、`climateLast24h`、`harvestKgLast7d`
 
 各实体 API：`GET/POST` 列表与创建、`DELETE` 按 ID 删除。
 
 ## 前端页面
 
-Login · Dashboard · Sheds · Rooms · ClimateLogs · FlushHarvests（侧边栏布局）
+Login · Dashboard · Sheds · Rooms · ClimateLogs · FlushHarvests · RestWindows（侧边栏布局）。休整窗页可开设/查看/删除休整窗；出菇室列表每行显示当前是否「休整中」及强度；采收表单在命中休整窗时给出提示，放行与否由后端裁决。
 
 ## 本地开发（可选）
 

@@ -12,6 +12,12 @@ class FlushHarvestCreateSchema(Schema):
     )
     grade = fields.Str(required=True, validate=validate.OneOf(["A", "B", "C"]))
     operator_name = fields.Str(required=True, data_key="operatorName", validate=validate.Length(min=1, max=64))
+    rest_confirm_text = fields.Str(
+        required=False,
+        data_key="confirmText",
+        allow_none=True,
+        validate=validate.Length(max=128),
+    )
 
 
 class FlushHarvestOutSchema(Schema):
@@ -22,3 +28,4 @@ class FlushHarvestOutSchema(Schema):
     weight_kg = fields.Float(data_key="weightKg")
     grade = fields.Str()
     operator_name = fields.Str(data_key="operatorName")
+    rest_confirm_text = fields.Str(data_key="confirmText", allow_none=True)

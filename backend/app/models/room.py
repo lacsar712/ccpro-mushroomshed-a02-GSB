@@ -24,3 +24,6 @@ class Room(Base):
     flush_harvests: Mapped[List["FlushHarvest"]] = relationship(
         "FlushHarvest", back_populates="room", cascade="all, delete-orphan"
     )
+    rest_windows: Mapped[List["RestWindow"]] = relationship(
+        "RestWindow", back_populates="room", cascade="all, delete-orphan"
+    )
